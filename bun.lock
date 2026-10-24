@@ -19,7 +19,7 @@
         "vitest": "~4.1.12",
       },
       "peerDependencies": {
-        "@sudobility/genui_types": "^0.0.4",
+        "@sudobility/genui_types": "^0.0.5",
         "@sudobility/types": "^1.9.76",
       },
     },
