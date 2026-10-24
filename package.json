@@ -1,6 +1,6 @@
 {
   "name": "@sudobility/genuivo_types",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "TypeScript types for Starter API - template project",
   "type": "module",
   "main": "./dist/index.js",
