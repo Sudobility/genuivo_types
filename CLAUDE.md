@@ -5,103 +5,95 @@
 > explicitly asks in that turn**. Approval for an earlier change does not carry forward, and
 > finishing a task is not permission to commit it.
 
-Shared TypeScript type definitions for the Genuivo API ecosystem.
+Shared TypeScript type definitions for the Genuivo API ecosystem. Foundation
+package: domain models, request/response shapes, and small runtime response
+helpers that every other `genuivo_*` project depends on.
 
-**npm**: `@sudobility/genuivo_types` (public)
+**npm**: `@sudobility/genuivo_types` (GitHub Packages, BUSL-1.1)
 
 ## Tech Stack
 
-- **Language**: TypeScript (strict mode)
-- **Runtime**: Bun
-- **Package Manager**: Bun (do not use npm/yarn/pnpm for installing dependencies)
-- **Build**: TypeScript compiler (dual ESM/CJS output)
+- **Language**: TypeScript (strict mode), `"type": "module"`
+- **Package manager**: Bun (do not use npm/yarn/pnpm to install)
+- **Build**: `tsc` — **ESM-only** output (no CJS, despite older notes)
 - **Test**: Vitest
 
 ## Project Structure
 
 ```
 src/
-├── index.ts           # All types, interfaces, and response helpers
-└── index.test.ts      # Tests
+├── index.ts        # All types, interfaces, response helpers, type guards (single barrel)
+└── index.test.ts   # Vitest tests (81 tests)
 ```
 
 ## Commands
 
 ```bash
-bun run build          # Build dual ESM/CJS (build:esm + build:cjs)
-bun run dev            # Watch mode
-bun test               # Run Vitest tests (src/index.test.ts)
-bun run typecheck      # TypeScript check
-bun run lint           # Run ESLint
-bun run verify         # All checks + build (use before commit)
-bun run prepublishOnly # Clean + verify (runs on publish)
+bun install            # Install deps (needs ~/.npmrc auth for @sudobility scope)
+bun run build          # Compile ESM to dist/ (tsc -p tsconfig.esm.json)
+bun run dev            # tsc --watch
+bun run typecheck      # tsc --noEmit
+bun run lint           # ESLint over src
+bun run test:unit      # Run Vitest once  (NOT `bun test` — that is Bun's own runner)
+bun run test:watch     # Vitest watch
+bun run verify         # typecheck + lint + test:unit + build (run before publishing)
+bun run prepublishOnly # clean + verify (runs on publish)
 ```
 
-## Key Types
+## Exports (src/index.ts)
 
-### History
-
-Core data type with fields: `id`, `user_id`, `datetime`, `value`, `created_at`, `updated_at`.
-
-### Request Types
-
-- `HistoryCreateRequest` — `{ datetime, value }`
-- `HistoryUpdateRequest` — `{ datetime?, value? }`
-- `HistoryTotalResponse` — `{ total }`
-
-### Response Helpers
-
-- `successResponse<T>(data)` — wraps data in `BaseResponse<T>` with `success: true`
-- `errorResponse(error)` — wraps error string in `BaseResponse<never>` with `success: false`
-
-### Re-exports from @sudobility/types
-
-`ApiResponse`, `BaseResponse`, `NetworkClient`, `Optional`
+- **Domain**: `User`, `History`, `ISODateString` (branded string)
+- **Request/response**: `HistoryCreateRequest`, `HistoryUpdateRequest`,
+  `HistoryTotalResponse`, `ChatRequest`, `ChatResponse`, `ApiInfoResponse`,
+  `HealthResponse`
+- **Runtime helpers**: `successResponse<T>(data)`, `errorResponse(error)` — both
+  build a `BaseResponse` envelope with `{ success, ..., timestamp }`
+- **Type guards**: `isSuccessResponse<T>(res)`, `isErrorResponse(res)`
+- **Re-exports**: `ApiResponse`, `BaseResponse`, `NetworkClient`, `Optional`
+  (from `@sudobility/types`); `IRenderable` (from `@sudobility/genui_types`)
 
 ## Peer Dependencies
 
-- `@sudobility/types` — shared infrastructure types
+- `@sudobility/types` — base infrastructure types (`BaseResponse`, `NetworkClient`, …)
+- `@sudobility/genui_types` — `IRenderable` for chat/GenUI types
 
 ## Architecture
 
 ```
 @sudobility/genuivo_types (this package)
     ^
-genuivo_api
-genuivo_client
-genuivo_lib
-genuivo_app
-genuivo_app_rn
+genuivo_api  genuivo_client  genuivo_lib  genuivo_app  genuivo_app_rn
 ```
 
 Foundation layer — all other Genuivo projects depend on this package.
 
-## Related Projects
+- **genuivo_api** — Backend API (Hono + PostgreSQL); uses types for validation
+- **genuivo_client** — API client SDK (TanStack Query); defines API contracts
+- **genuivo_lib** — Business logic (Zustand); imports types via genuivo_client
+- **genuivo_app** — Web app (React + Vite); imports transitively
+- **genuivo_app_rn** — React Native app; imports transitively
 
-- **genuivo_api** — Backend API server (Hono + PostgreSQL); imports types for request/response validation
-- **genuivo_client** — API client SDK with TanStack Query hooks; imports types for API contracts
-- **genuivo_lib** — Business logic library with Zustand stores; imports types transitively via genuivo_client
-- **genuivo_app** — Web application (React + Vite); imports types transitively via genuivo_client and genuivo_lib
-- **genuivo_app_rn** — React Native mobile app (Expo); imports types via file: links
+## Conventions
 
-All other genuivo_* projects depend on this package. This package depends on `@sudobility/types` for base infrastructure types (`BaseResponse`, `NetworkClient`, etc.).
-
-## Coding Patterns
-
-- Pure type definitions only -- no runtime logic except the `successResponse` and `errorResponse` helper functions
-- Dual CJS/ESM build output: `build:esm` produces ES modules, `build:cjs` produces CommonJS
-- All public types and helpers are exported from a single `src/index.ts` barrel file
-- Re-export base types from `@sudobility/types` so consumers only need to depend on this package
-- Use `interface` for object shapes and `type` for unions/aliases
-- Keep type names consistent with API naming: `History`, `HistoryCreateRequest`, `HistoryUpdateRequest`, `HistoryTotalResponse`
+- Pure type definitions; the only runtime logic is the four helpers/guards above.
+- All public exports go through the single `src/index.ts` barrel.
+- `interface` for object shapes, `type` for unions/aliases/brands.
+- Type names track API naming: `History`, `HistoryCreateRequest`, etc.
+- Re-export base types from `@sudobility/types` so consumers depend only on this package.
+- Nullable DB-backed timestamp fields are `string | null`.
 
 ## Gotchas
 
-- Changes here affect ALL consumer projects (genuivo_api, genuivo_client, genuivo_lib, genuivo_app, genuivo_app_rn) -- always consider downstream impact
-- Must build both ESM and CJS targets; consumers may use either module system
-- Always run `bun run verify` before publishing to catch type errors, lint issues, and build failures
-- The `BaseResponse<T>` wrapper is the standard API envelope -- all API responses must conform to it
-- Do not add runtime dependencies; this package should remain a lightweight type-only dependency (response helpers are the sole exception)
+- **Downstream blast radius**: changes here affect ALL consumers (genuivo_api,
+  _client, _lib, _app, _app_rn). Always consider downstream impact.
+- **ESM-only**: `build` runs only `tsc -p tsconfig.esm.json`; there is no CJS
+  target. `exports` exposes only `import`/`types`.
+- **Run `bun run verify` before publishing** to catch type/lint/test/build failures.
+- `BaseResponse<T>` is the standard API envelope — all API responses conform to it.
+- Keep this a lightweight type-only dependency; add no runtime deps (the response
+  helpers/guards are the sole runtime code).
+- Two ESLint configs exist (`eslint.config.js` and `eslint.config.mjs`); ESLint
+  resolves `eslint.config.js` first, so the `.mjs` is effectively unused.
 
 ## Git Workflow
 
