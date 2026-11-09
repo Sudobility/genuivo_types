@@ -1,6 +1,6 @@
 {
   "name": "@sudobility/genuivo_types",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "description": "TypeScript types for Starter API - template project",
   "type": "module",
   "main": "./dist/index.js",
@@ -40,11 +40,11 @@
   "license": "BUSL-1.1",
   "peerDependencies": {
     "@sudobility/genui_types": "^0.0.5",
-    "@sudobility/types": "^1.9.76"
+    "@sudobility/types": "^1.9.78"
   },
   "devDependencies": {
     "@eslint/js": "~9.39.5",
-    "@sudobility/types": "^1.9.76",
+    "@sudobility/types": "^1.9.78",
     "@typescript-eslint/eslint-plugin": "~8.72.0",
     "@typescript-eslint/parser": "~8.72.0",
     "eslint": "~9.39.5",
